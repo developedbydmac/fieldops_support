@@ -1,0 +1,22 @@
+# Global code owners
+* @developedbydmac
+
+# Infrastructure and Terraform
+/infra/ @developedbydmac
+*.tf @developedbydmac
+*.tfvars @developedbydmac
+
+# GitHub workflows and CI/CD
+/.github/ @developedbydmac
+
+# Documentation
+README.md @developedbydmac
+/ADRs/ @developedbydmac
+/ops/runbooks/ @developedbydmac
+
+# Future code owners (uncomment when team expands)
+# /services/api/ @backend-team
+# /services/adapters/ @backend-team
+# /tests/ @qa-team
+# /ops/dashboards/ @sre-team
+# /ops/alerts/ @sre-team
