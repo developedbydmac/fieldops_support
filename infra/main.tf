@@ -52,6 +52,16 @@ resource "azurerm_subnet" "data" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = var.data_subnet_address_prefixes
+  
+  delegation {
+    name = "PostgreSQL-delegation"
+    service_delegation {
+      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+      ]
+    }
+  }
 }
 
 # Private Endpoints Subnet
@@ -103,15 +113,40 @@ resource "azurerm_subnet_network_security_group_association" "app" {
 }
 
 # TODO: Day 3 - PostgreSQL Flexible Server
+# Private DNS Zone for PostgreSQL
+resource "azurerm_private_dns_zone" "postgres" {
+  name                = "${var.name_prefix}-${var.environment}.postgres.database.azure.com"
+  resource_group_name = azurerm_resource_group.main.name
+
+  tags = merge(var.tags, {
+    Environment = var.environment
+  })
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
+  name                  = "postgres-vnet-link"
+  resource_group_name   = azurerm_resource_group.main.name
+  private_dns_zone_name = azurerm_private_dns_zone.postgres.name
+  virtual_network_id    = azurerm_virtual_network.main.id
+
+  tags = merge(var.tags, {
+    Environment = var.environment
+  })
+}
+
 resource "azurerm_postgresql_flexible_server" "main" {
   name                   = "psql-${var.name_prefix}-${var.environment}"
   resource_group_name    = azurerm_resource_group.main.name
   location               = azurerm_resource_group.main.location
   version                = var.postgres_version
   delegated_subnet_id    = azurerm_subnet.data.id
+  private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
   administrator_login    = var.postgres_admin_username
   administrator_password = random_password.postgres_password.result
   zone                   = "1"
+  
+  # Disable public access when using VNet integration
+  public_network_access_enabled = false
   
   storage_mb = var.postgres_storage_mb
   sku_name   = var.postgres_sku_name
@@ -119,6 +154,8 @@ resource "azurerm_postgresql_flexible_server" "main" {
   tags = merge(var.tags, {
     Environment = var.environment
   })
+
+  depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
 
 resource "azurerm_postgresql_flexible_server_database" "main" {
@@ -148,7 +185,7 @@ resource "azurerm_storage_account" "logs" {
 
 resource "azurerm_storage_container" "logs" {
   name                  = "application-logs"
-  storage_account_id    = azurerm_storage_account.logs.id
+  storage_account_name  = azurerm_storage_account.logs.name
   container_access_type = "private"
 }
 

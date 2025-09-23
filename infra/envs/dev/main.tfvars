@@ -12,7 +12,7 @@ pe_subnet_address_prefixes   = ["10.0.3.0/24"]
 postgres_sku_name    = "B_Standard_B1ms"
 postgres_storage_mb  = 32768
 apim_sku            = "Developer_1"
-app_service_sku     = "B1"
+app_service_sku     = "F1"
 
 # Development team contact
 apim_publisher_name  = "FieldOps Dev Team"

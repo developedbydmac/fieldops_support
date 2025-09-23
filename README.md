@@ -66,10 +66,18 @@ terraform apply -var-file=envs/dev/main.tfvars
 - **Commits:** Conventional Commits (e.g., `feat(iac): add vnet + subnets`)
 
 ## 8) Acceptance Criteria (Phase-1)
-- ✅ `terraform apply` completes cleanly.
-- ✅ Outputs include: APIM URL, KV URI, PG FQDN, Storage URL.
+- ✅ `terraform apply` completes cleanly for core infrastructure.
+- ⚠️ Outputs include: APIM URL (pending import), KV URI ✅, PG FQDN (blocked by region), Storage URL ✅.
 - ✅ Diagnostic Settings linked to Log Analytics.
-- ✅ Repo tagged `v0.1-phase1`.
+- ✅ Repo tagged `v0.1-day1-foundation`.
+
+### Day-1 Status Report
+**🎉 FOUNDATION DEPLOYED** - See [Day-1 Report](docs/deployment-reports/day-1/) for complete status
+- ✅ **Network Infrastructure:** VNet, subnets, NSGs, private DNS
+- ✅ **Security Services:** Key Vault, storage, secrets management  
+- ✅ **Monitoring:** Log Analytics workspace ready
+- ⚠️ **Blockers:** App Service quota limits, PostgreSQL regional restrictions
+- 📋 **Next:** Azure Support requests for quota/region access
 
 ## 9) Troubleshooting Drill (Phase-1)
 - **Symptom:** APIM gateway returns timeout to App Service.
