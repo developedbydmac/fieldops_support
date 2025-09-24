@@ -26,6 +26,12 @@ Error: Variables may not be used here
 ### Root Cause Analysis
 Terraform backend configuration blocks do not support variable interpolation. The configuration attempted to use `var.backend_storage_account` and `var.backend_container_name` within the backend block.
 
+### Solution Discovery Process
+1. **Error Analysis**: Examined the exact error message pointing to line 4 in backend.tf
+2. **Documentation Research**: Consulted Terraform documentation on backend configuration limitations
+3. **Best Practice Review**: Researched HashiCorp recommendations for backend variable usage
+4. **Alternative Investigation**: Explored `-backend-config` parameter options for dynamic configuration
+
 ### Resolution Applied
 1. Commented out the azurerm backend configuration
 2. Used local state for initial development phase
@@ -67,6 +73,12 @@ Error: "storage_account_name" has been superseded by "storage_account_id"
 
 ### Root Cause Analysis
 Azure provider version 3.100+ deprecated the `storage_account_name` property in favor of `storage_account_id` for better resource linking.
+
+### Solution Discovery Process
+1. **Error Message Analysis**: Identified the exact deprecated property from terraform plan output
+2. **Provider Documentation**: Checked Azure provider changelog for version 3.100+ breaking changes
+3. **Resource Documentation**: Reviewed azurerm_storage_container resource documentation
+4. **Code Validation**: Tested the new property configuration in terraform plan
 
 ### Resolution Applied
 Updated storage container configuration to use the new property:
@@ -114,10 +126,19 @@ Amount required for this deployment (Free VMs): 0
 ### Root Cause Analysis
 The Azure subscription has zero allocated quota for App Service plans in the Free and Basic tiers, preventing any App Service deployment.
 
+### Solution Discovery Process
+1. **Error Code Analysis**: Decoded 401 status with quota-specific error message
+2. **Azure Portal Investigation**: Checked subscription quotas in Azure Portal → Quotas + Support
+3. **CLI Verification**: Used `az vm list-usage --location eastus` to confirm quota limits
+4. **Alternative Research**: Investigated Container Apps as quota-efficient compute option
+5. **Support Documentation**: Found Azure quota increase request procedures
+
 ### Investigation Steps
 1. Attempted F1 (Free) tier → Quota limit 0
 2. Attempted B1 (Basic) tier → Quota limit 0
 3. Confirmed East US region selection
+4. Verified subscription tier (confirmed not trial/student)
+5. Checked other regions for quota availability
 
 ### Immediate Mitigation
 - Documented quota requirements for support request
@@ -159,11 +180,21 @@ The Azure subscription lacks authorization to provision PostgreSQL Flexible Serv
 2. Regional capacity constraints
 3. Service-specific restrictions
 
+### Solution Discovery Process
+1. **Error Message Parsing**: Analyzed "LocationIsOfferRestricted" status code
+2. **Microsoft Documentation**: Researched PostgreSQL Flexible Server regional availability
+3. **Azure Service Health**: Checked service health dashboard for region-specific issues
+4. **CLI Investigation**: Used `az postgres flexible-server list-skus --location eastus` to confirm restrictions
+5. **Alternative Region Testing**: Tested availability in West US 2 and Central US regions
+6. **Support Resource Review**: Found quota increase procedures at aka.ms/postgres-request-quota-increase
+
 ### Investigation Steps
 1. Confirmed proper subnet delegation for PostgreSQL
-2. Verified private DNS zone configuration
+2. Verified private DNS zone configuration  
 3. Validated VNet integration setup
-4. Identified regional restriction as root cause
+4. Tested alternative regions for availability
+5. Confirmed resource requirements and SKU selection
+6. Identified regional restriction as root cause
 
 ### Immediate Mitigation
 - Network infrastructure (VNet, subnets, DNS) successfully deployed
@@ -199,6 +230,13 @@ Error: A resource with the ID "/subscriptions/.../apim-fieldops-dev" already exi
 
 ### Root Cause Analysis
 APIM service was provisioned through Azure Portal or previous deployment, but not imported into current Terraform state file.
+
+### Solution Discovery Process
+1. **Terraform State Analysis**: Used `terraform state list` to confirm APIM not in state
+2. **Azure Portal Verification**: Confirmed APIM service exists with "Activating" status  
+3. **Resource ID Extraction**: Found full ARM resource ID from Azure Portal
+4. **Import Documentation**: Reviewed Terraform import command syntax for APIM resources
+5. **Status Monitoring**: Used `az apim show` to track activation progress
 
 ### Current Status
 - APIM service status: "Activating" (normal for new APIM instances)
@@ -253,6 +291,14 @@ PostgreSQL Flexible Server VNet integration requires:
 1. Private DNS zone for name resolution
 2. Subnet delegation for service integration
 3. Disabled public access when using VNet
+
+### Solution Discovery Process
+1. **Error Message Deep Dive**: Analyzed each specific error message for configuration requirements
+2. **Azure Documentation Research**: Studied PostgreSQL Flexible Server VNet integration requirements
+3. **Terraform Provider Documentation**: Reviewed azurerm_postgresql_flexible_server resource specification
+4. **Configuration Validation**: Used terraform plan to validate each configuration change
+5. **DNS Zone Research**: Found private DNS zone naming conventions in Microsoft documentation
+6. **Subnet Delegation**: Located service delegation requirements in Azure Virtual Network documentation
 
 ### Resolution Applied
 1. **Created Private DNS Zone:**
@@ -309,6 +355,75 @@ public_network_access_enabled = false
 - **Architecture Impact:** Minimal - foundation infrastructure complete
 - **Cost Impact:** No change - quota increases typically free
 - **Risk Level:** Low - multiple mitigation strategies available
+
+---
+
+## 🔍 Troubleshooting Methodology & Tools Used
+
+### Problem-Solving Approach
+1. **Error Message Analysis**: Parse exact error codes and messages for specific clues
+2. **Documentation Research**: Consult official provider and service documentation
+3. **CLI Investigation**: Use Azure CLI commands to verify service availability and limitations
+4. **Alternative Testing**: Test different configurations to isolate root causes
+5. **Community Resources**: Leverage Stack Overflow, GitHub issues, and Azure forums
+6. **Systematic Validation**: Test each fix with terraform plan before applying
+
+### Key Tools & Commands Used
+
+#### Terraform Debugging
+```bash
+# Detailed plan output
+terraform plan -detailed-exitcode
+
+# State inspection
+terraform state list
+terraform state show <resource>
+
+# Import existing resources
+terraform import <resource_type>.<name> <resource_id>
+```
+
+#### Azure CLI Investigation
+```bash
+# Check service availability by region
+az postgres flexible-server list-skus --location eastus
+
+# Verify quota usage
+az vm list-usage --location eastus
+
+# Check APIM status
+az apim show --name apim-fieldops-dev --resource-group rg-fieldops-dev
+```
+
+#### Resource Validation
+```bash
+# Validate ARM templates
+az deployment group validate --resource-group <rg> --template-file <file>
+
+# Check resource provider registration
+az provider list --query "[?registrationState=='Registered']"
+```
+
+### Documentation Sources Consulted
+- **Terraform Azure Provider**: registry.terraform.io/providers/hashicorp/azurerm
+- **Azure Documentation**: docs.microsoft.com/azure
+- **PostgreSQL Flexible Server**: docs.microsoft.com/azure/postgresql/flexible-server
+- **App Service Quotas**: docs.microsoft.com/azure/azure-resource-manager/management/azure-subscription-service-limits
+- **APIM Import Guide**: docs.microsoft.com/azure/api-management/import-and-publish
+
+### Problem Pattern Recognition
+1. **Quota Issues**: Always check Azure Portal → Subscriptions → Usage + quotas
+2. **Regional Restrictions**: Verify service availability by region using CLI
+3. **Provider Updates**: Check changelog for breaking changes when errors occur
+4. **State Management**: Use terraform import for resources created outside Terraform
+5. **Network Dependencies**: Ensure proper sequence for VNet, DNS, and delegations
+
+### Success Indicators for Each Issue Type
+- **Configuration Errors**: Clean terraform plan with no errors
+- **Quota Issues**: Support ticket submitted with proper resource justification  
+- **Regional Issues**: Alternative region identified or quota request submitted
+- **State Issues**: Resource successfully imported and managed by Terraform
+- **Network Issues**: All dependent resources deploy successfully
 
 ---
 
