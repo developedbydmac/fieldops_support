@@ -1,22 +1,35 @@
-# Network Outputs
+# =============================================================================
+# NETWORK OUTPUTS (Day-2 Module Integration)
+# =============================================================================
+
 output "vnet_id" {
   description = "ID of the virtual network"
-  value       = azurerm_virtual_network.main.id
+  value       = module.network.vnet_id
+}
+
+output "vnet_name" {
+  description = "Name of the virtual network"
+  value       = module.network.vnet_name
 }
 
 output "app_subnet_id" {
-  description = "ID of the app subnet"
-  value       = azurerm_subnet.app.id
+  description = "ID of the application subnet"
+  value       = module.network.subnet_app_id
 }
 
 output "data_subnet_id" {
   description = "ID of the data subnet"
-  value       = azurerm_subnet.data.id
+  value       = module.network.subnet_data_id
 }
 
 output "pe_subnet_id" {
   description = "ID of the private endpoints subnet"
-  value       = azurerm_subnet.pe.id
+  value       = module.network.subnet_pe_id
+}
+
+output "network_summary" {
+  description = "Summary of network configuration"
+  value       = module.network.network_summary
 }
 
 # API Management Outputs

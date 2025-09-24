@@ -17,99 +17,30 @@ resource "random_password" "postgres_password" {
   numeric = true
 }
 
-# TODO: Day 2 - VNet and Subnets
-# Virtual Network
-resource "azurerm_virtual_network" "main" {
-  name                = "vnet-${var.name_prefix}-${var.environment}"
-  address_space       = var.vnet_address_space
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+# =============================================================================
+# DAY-2: NETWORK MODULE INTEGRATION
+# =============================================================================
 
+module "network" {
+  source = "./modules/network"
+
+  # Module configuration
+  name_prefix         = "${var.name_prefix}-${var.environment}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
   tags = merge(var.tags, {
     Environment = var.environment
   })
-}
 
-# App Subnet
-resource "azurerm_subnet" "app" {
-  name                 = "snet-app-${var.environment}"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = var.app_subnet_address_prefixes
+  # Network addressing
+  vnet_cidr        = var.vnet_cidr
+  subnet_app_cidr  = var.subnet_app_cidr
+  subnet_data_cidr = var.subnet_data_cidr
+  subnet_pe_cidr   = var.subnet_pe_cidr
 
-  delegation {
-    name = "app-service-delegation"
-    service_delegation {
-      name    = "Microsoft.Web/serverFarms"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    }
-  }
-}
-
-# Data Subnet
-resource "azurerm_subnet" "data" {
-  name                 = "snet-data-${var.environment}"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = var.data_subnet_address_prefixes
-  
-  delegation {
-    name = "PostgreSQL-delegation"
-    service_delegation {
-      name = "Microsoft.DBforPostgreSQL/flexibleServers"
-      actions = [
-        "Microsoft.Network/virtualNetworks/subnets/join/action",
-      ]
-    }
-  }
-}
-
-# Private Endpoints Subnet
-resource "azurerm_subnet" "pe" {
-  name                 = "snet-pe-${var.environment}"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = var.pe_subnet_address_prefixes
-}
-
-# Network Security Groups
-resource "azurerm_network_security_group" "app" {
-  name                = "nsg-app-${var.environment}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  security_rule {
-    name                       = "AllowHTTPS"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "AllowHTTP"
-    priority                   = 1002
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
-
-resource "azurerm_subnet_network_security_group_association" "app" {
-  subnet_id                 = azurerm_subnet.app.id
-  network_security_group_id = azurerm_network_security_group.app.id
+  # Optional features (disabled for dev environment)
+  enable_ddos_protection = false
+  dns_servers           = []
 }
 
 # TODO: Day 3 - PostgreSQL Flexible Server
@@ -127,7 +58,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
   name                  = "postgres-vnet-link"
   resource_group_name   = azurerm_resource_group.main.name
   private_dns_zone_name = azurerm_private_dns_zone.postgres.name
-  virtual_network_id    = azurerm_virtual_network.main.id
+  virtual_network_id    = module.network.vnet_id
 
   tags = merge(var.tags, {
     Environment = var.environment
@@ -139,7 +70,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
   resource_group_name    = azurerm_resource_group.main.name
   location               = azurerm_resource_group.main.location
   version                = var.postgres_version
-  delegated_subnet_id    = azurerm_subnet.data.id
+  delegated_subnet_id    = module.network.subnet_data_id
   private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
   administrator_login    = var.postgres_admin_username
   administrator_password = random_password.postgres_password.result

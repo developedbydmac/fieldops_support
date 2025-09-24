@@ -2,7 +2,17 @@ environment = "dev"
 location    = "East US"
 name_prefix = "fieldops"
 
-# Development-specific configurations
+# =============================================================================
+# DAY-2: NETWORK MODULE CONFIGURATION  
+# =============================================================================
+
+# Network addressing (Day-2 module-based approach)
+vnet_cidr        = "10.20.0.0/16"
+subnet_app_cidr  = "10.20.1.0/24"
+subnet_data_cidr = "10.20.2.0/24"
+subnet_pe_cidr   = "10.20.3.0/24"
+
+# Legacy network configuration (deprecated)
 vnet_address_space           = ["10.0.0.0/16"]
 app_subnet_address_prefixes  = ["10.0.1.0/24"]
 data_subnet_address_prefixes = ["10.0.2.0/24"]

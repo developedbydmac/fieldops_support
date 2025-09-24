@@ -25,27 +25,55 @@ variable "tags" {
   }
 }
 
-# Network Variables
+# =============================================================================
+# NETWORK VARIABLES (Day-2 Module Integration)
+# =============================================================================
+
+variable "vnet_cidr" {
+  description = "CIDR block for the Virtual Network"
+  type        = string
+  default     = "10.20.0.0/16"
+}
+
+variable "subnet_app_cidr" {
+  description = "CIDR block for the application subnet"
+  type        = string
+  default     = "10.20.1.0/24"
+}
+
+variable "subnet_data_cidr" {
+  description = "CIDR block for the data subnet"
+  type        = string
+  default     = "10.20.2.0/24"
+}
+
+variable "subnet_pe_cidr" {
+  description = "CIDR block for the private endpoints subnet"
+  type        = string
+  default     = "10.20.3.0/24"
+}
+
+# Legacy network variables (to be deprecated after migration)
 variable "vnet_address_space" {
-  description = "Address space for the virtual network"
+  description = "DEPRECATED: Use vnet_cidr instead"
   type        = list(string)
   default     = ["10.0.0.0/16"]
 }
 
 variable "app_subnet_address_prefixes" {
-  description = "Address prefixes for the app subnet"
+  description = "DEPRECATED: Use subnet_app_cidr instead"
   type        = list(string)
   default     = ["10.0.1.0/24"]
 }
 
 variable "data_subnet_address_prefixes" {
-  description = "Address prefixes for the data subnet"
+  description = "DEPRECATED: Use subnet_data_cidr instead"
   type        = list(string)
   default     = ["10.0.2.0/24"]
 }
 
 variable "pe_subnet_address_prefixes" {
-  description = "Address prefixes for the private endpoints subnet"
+  description = "DEPRECATED: Use subnet_pe_cidr instead"
   type        = list(string)
   default     = ["10.0.3.0/24"]
 }
