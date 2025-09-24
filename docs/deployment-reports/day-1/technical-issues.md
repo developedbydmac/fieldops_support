@@ -346,9 +346,12 @@ public_network_access_enabled = false
 | Terraform Backend | High | ✅ Resolved | Initial deployment | Complete |
 | Storage Container | Medium | ✅ Resolved | Storage services | Complete |
 | App Service Quota | High | ⏳ Pending | Compute services | 1-2 business days |
-| PostgreSQL Region | High | ⏳ Pending | Database services | 1-3 business days |
+| PostgreSQL Region | High | 🔄 **Recurring Issue** | Database services | **Day-3 Status: Still blocked** |
 | APIM Import | Medium | ⏳ Pending | API gateway | ~30 minutes |
 | PostgreSQL VNet | Medium | ✅ Resolved | Database networking | Complete |
+
+### 🔄 **Day-3 Update**: PostgreSQL Regional Restriction
+The PostgreSQL regional restriction persisted during Day-3 deployment (September 24, 2025). All supporting infrastructure (Storage, Private Networking, Network Enhancement) deployed successfully, but PostgreSQL Flexible Server remains blocked in East US region. **Status**: Known limitation requiring regional migration or service alternative.
 
 ### Overall Impact Assessment
 - **Timeline Impact:** 1-2 day delay for compute and database services

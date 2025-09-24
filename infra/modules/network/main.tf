@@ -261,11 +261,13 @@ resource "azurerm_subnet" "data" {
 
   # Delegation for PostgreSQL Flexible Server
   delegation {
-    name = "PostgreSQL-delegation"
+    name = "pg-flexible-delegation"
     service_delegation {
       name = "Microsoft.DBforPostgreSQL/flexibleServers"
       actions = [
         "Microsoft.Network/virtualNetworks/subnets/join/action",
+        "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",
+        "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action"
       ]
     }
   }

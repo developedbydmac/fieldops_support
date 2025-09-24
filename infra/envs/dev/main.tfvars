@@ -1,24 +1,53 @@
-environment = "dev"
-location    = "East US"
+# =============================================================================
+# DAY-3 DEVELOPMENT ENVIRONMENT CONFIGURATION
+# FieldOps Support AI - Modular Architecture
+# =============================================================================
+
+# Basic Configuration
+location    = "eastus"
 name_prefix = "fieldops"
 
 # =============================================================================
-# DAY-2: NETWORK MODULE CONFIGURATION  
+# NETWORK CONFIGURATION (Day-2 Module)
 # =============================================================================
 
-# Network addressing (Day-2 module-based approach)
 vnet_cidr        = "10.20.0.0/16"
 subnet_app_cidr  = "10.20.1.0/24"
 subnet_data_cidr = "10.20.2.0/24"
 subnet_pe_cidr   = "10.20.3.0/24"
 
-# Legacy network configuration (deprecated)
-vnet_address_space           = ["10.0.0.0/16"]
-app_subnet_address_prefixes  = ["10.0.1.0/24"]
-data_subnet_address_prefixes = ["10.0.2.0/24"]
-pe_subnet_address_prefixes   = ["10.0.3.0/24"]
+# =============================================================================
+# POSTGRESQL CONFIGURATION (Day-3 Module)
+# =============================================================================
 
-# Small sizes for development
+postgres_administrator_login = "fieldopsadmin"
+postgres_database_name       = "fieldops"
+postgres_server_sku_name     = "B_Standard_B1ms"
+postgres_storage_mb_v2       = 32768
+postgres_version_v2          = "16"
+
+# =============================================================================
+# STORAGE CONFIGURATION (Day-3 Module)
+# =============================================================================
+
+storage_account_tier     = "Standard"
+storage_replication_type = "LRS"
+storage_container_name   = "logs"
+
+# =============================================================================
+# PRIVATE NETWORKING CONFIGURATION (Day-3 Module)
+# =============================================================================
+
+enable_postgres_private_dns      = true
+enable_storage_private_endpoints = true
+enable_blob_private_endpoint     = true
+enable_file_private_endpoint     = false
+
+# =============================================================================
+# LEGACY CONFIGURATION (Day-1 Foundation)
+# =============================================================================
+
+# Keep for backward compatibility during migration
 postgres_sku_name    = "B_Standard_B1ms"
 postgres_storage_mb  = 32768
 apim_sku            = "Developer_1"
@@ -28,10 +57,15 @@ app_service_sku     = "F1"
 apim_publisher_name  = "FieldOps Dev Team"
 apim_publisher_email = "dev-fieldops@company.com"
 
+# =============================================================================
+# RESOURCE TAGS
+# =============================================================================
+
 tags = {
-  Project     = "FieldOps Support AI"
-  Phase       = "1-IaC"
-  Environment = "dev"
-  ManagedBy   = "Terraform"
-  Owner       = "Development Team"
+  project     = "fieldops-support-ai"
+  env         = "dev"
+  owner       = "D-Mac"
+  phase       = "Day-3"
+  managed_by  = "terraform"
+  cost_center = "engineering"
 }

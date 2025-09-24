@@ -1,35 +1,45 @@
-# Resource Group
-resource "azurerm_resource_group" "main" {
-  name     = "rg-${var.name_prefix}-${var.environment}"
-  location = var.location
+# =============================================================================
+# MAIN INFRASTRUCTURE CONFIGURATION
+# FieldOps Support AI - Day-3 Modular Architecture
+# =============================================================================
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
+# Provider configuration is in providers.tf
 
-# Random password for PostgreSQL
-resource "random_password" "postgres_password" {
-  length  = 16
-  special = true
-  upper   = true
-  lower   = true
-  numeric = true
+# =============================================================================
+# LOCALS AND DATA SOURCES
+# =============================================================================
+
+locals {
+  rg_name = coalesce(var.resource_group_name_override, "rg-${var.name_prefix}-${terraform.workspace}")
 }
 
 # =============================================================================
-# DAY-2: NETWORK MODULE INTEGRATION
+# RESOURCE GROUP
+# =============================================================================
+
+resource "azurerm_resource_group" "main" {
+  name     = local.rg_name
+  location = var.location
+
+  tags = merge(var.tags, {
+    Environment = terraform.workspace
+    Phase       = "Day-3"
+  })
+}
+
+# =============================================================================
+# DAY-2: NETWORK MODULE
 # =============================================================================
 
 module "network" {
   source = "./modules/network"
 
   # Module configuration
-  name_prefix         = "${var.name_prefix}-${var.environment}"
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
   location            = var.location
   resource_group_name = azurerm_resource_group.main.name
   tags = merge(var.tags, {
-    Environment = var.environment
+    Environment = terraform.workspace
   })
 
   # Network addressing
@@ -43,153 +53,156 @@ module "network" {
   dns_servers           = []
 }
 
-# TODO: Day 3 - PostgreSQL Flexible Server
-# Private DNS Zone for PostgreSQL
-resource "azurerm_private_dns_zone" "postgres" {
-  name                = "${var.name_prefix}-${var.environment}.postgres.database.azure.com"
+# =============================================================================
+# DAY-3: STORAGE MODULE
+# =============================================================================
+
+module "storage" {
+  source = "./modules/storage"
+  
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
   resource_group_name = azurerm_resource_group.main.name
-
   tags = merge(var.tags, {
-    Environment = var.environment
+    Environment = terraform.workspace
   })
+
+  # Storage configuration
+  account_tier             = var.storage_account_tier
+  account_replication_type = var.storage_replication_type
+  container_name          = var.storage_container_name
 }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
-  name                  = "postgres-vnet-link"
-  resource_group_name   = azurerm_resource_group.main.name
-  private_dns_zone_name = azurerm_private_dns_zone.postgres.name
-  virtual_network_id    = module.network.vnet_id
+# =============================================================================
+# DAY-3: PRIVATE NETWORKING MODULE
+# =============================================================================
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
-
-resource "azurerm_postgresql_flexible_server" "main" {
-  name                   = "psql-${var.name_prefix}-${var.environment}"
-  resource_group_name    = azurerm_resource_group.main.name
-  location               = azurerm_resource_group.main.location
-  version                = var.postgres_version
-  delegated_subnet_id    = module.network.subnet_data_id
-  private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
-  administrator_login    = var.postgres_admin_username
-  administrator_password = random_password.postgres_password.result
-  zone                   = "1"
+module "private_net" {
+  source = "./modules/private_net"
   
-  # Disable public access when using VNet integration
-  public_network_access_enabled = false
-  
-  storage_mb = var.postgres_storage_mb
-  sku_name   = var.postgres_sku_name
-
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  vnet_id             = module.network.vnet_id
+  subnet_pe_id        = module.network.subnet_pe_id
   tags = merge(var.tags, {
-    Environment = var.environment
+    Environment = terraform.workspace
   })
 
-  depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
+  # Target resources for private endpoints
+  storage_account_id = module.storage.storage_account_id
+  postgres_server_id = null # PostgreSQL uses delegated subnet, not PE
+
+  # Private endpoint configuration
+  enable_blob_private_endpoint = var.enable_blob_private_endpoint
+  enable_file_private_endpoint = var.enable_file_private_endpoint
+
+  # DNS zone configuration
+  enable_postgres_dns_zone = var.enable_postgres_private_dns
+  enable_storage_dns_zones = var.enable_storage_private_endpoints
 }
 
-resource "azurerm_postgresql_flexible_server_database" "main" {
-  name      = "fieldops_db"
-  server_id = azurerm_postgresql_flexible_server.main.id
-  collation = "en_US.utf8"
-  charset   = "utf8"
-}
+# =============================================================================
+# DAY-3: POSTGRESQL MODULE
+# =============================================================================
 
-# TODO: Day 3 - Storage Account
-resource "azurerm_storage_account" "logs" {
-  name                     = "st${var.name_prefix}logs${var.environment}"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+module "postgres" {
+  source = "./modules/postgres"
   
-  blob_properties {
-    versioning_enabled = true
-  }
-
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
   tags = merge(var.tags, {
-    Environment = var.environment
-    Purpose     = "Logs"
+    Environment = terraform.workspace
   })
+
+  # Network configuration
+  delegated_subnet_id = module.network.subnet_data_id
+  private_dns_zone_id = module.private_net.pdz_postgres_id
+
+  # PostgreSQL configuration
+  server_sku_name         = var.postgres_server_sku_name
+  storage_mb              = var.postgres_storage_mb_v2
+  postgres_version        = var.postgres_version_v2
+  administrator_login     = var.postgres_administrator_login
+  administrator_password  = var.postgres_administrator_password
+  database_name           = var.postgres_database_name
 }
 
-resource "azurerm_storage_container" "logs" {
-  name                  = "application-logs"
-  storage_account_name  = azurerm_storage_account.logs.name
-  container_access_type = "private"
-}
+# =============================================================================
+# LEGACY RESOURCES (Day-1 Foundation)
+# =============================================================================
 
-# TODO: Day 4 - Log Analytics Workspace
+# Log Analytics Workspace (Day-1 Legacy Resource)
 resource "azurerm_log_analytics_workspace" "main" {
-  name                = "log-${var.name_prefix}-${var.environment}"
+  name                = "log-${var.name_prefix}-${terraform.workspace}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
   tags = merge(var.tags, {
-    Environment = var.environment
+    Environment = terraform.workspace
   })
 }
 
-# TODO: Day 4 - App Service Plan
-resource "azurerm_service_plan" "main" {
-  name                = "asp-${var.name_prefix}-${var.environment}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  os_type             = "Linux"
-  sku_name            = var.app_service_sku
+# App Service Plan (Day-4 Future - commented out for quota issues)
+# resource "azurerm_service_plan" "main" {
+#   name                = "asp-${var.name_prefix}-${terraform.workspace}"
+#   resource_group_name = azurerm_resource_group.main.name
+#   location            = azurerm_resource_group.main.location
+#   os_type             = "Linux"
+#   sku_name            = var.app_service_sku
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
+#   tags = merge(var.tags, {
+#     Environment = terraform.workspace
+#   })
+# }
 
-# TODO: Day 4 - App Service
-resource "azurerm_linux_web_app" "main" {
-  name                = "app-${var.name_prefix}-${var.environment}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_service_plan.main.location
-  service_plan_id     = azurerm_service_plan.main.id
+# App Service (Day-4 Future - commented out for quota issues)
+# resource "azurerm_linux_web_app" "main" {
+#   name                = "app-${var.name_prefix}-${terraform.workspace}"
+#   resource_group_name = azurerm_resource_group.main.name
+#   location            = azurerm_service_plan.main.location
+#   service_plan_id     = azurerm_service_plan.main.id
 
-  site_config {
-    always_on = false
-    application_stack {
-      python_version = "3.9"
-    }
-  }
+#   site_config {
+#     always_on = false
+#     application_stack {
+#       python_version = "3.9"
+#     }
+#   }
 
-  app_settings = {
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    "POSTGRES_HOST"                       = azurerm_postgresql_flexible_server.main.fqdn
-    "POSTGRES_DB"                         = azurerm_postgresql_flexible_server_database.main.name
-    "POSTGRES_USER"                       = var.postgres_admin_username
-    # Password will be stored in Key Vault
-  }
+#   app_settings = {
+#     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+#     "POSTGRES_HOST"                       = module.postgres.pg_fqdn
+#     "POSTGRES_DB"                         = module.postgres.pg_db_name
+#     "POSTGRES_USER"                       = var.postgres_administrator_login
+#     # Password will be stored in Key Vault
+#   }
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
+#   tags = merge(var.tags, {
+#     Environment = terraform.workspace
+#   })
+# }
 
-# TODO: Day 4 - API Management
-resource "azurerm_api_management" "main" {
-  name                = "apim-${var.name_prefix}-${var.environment}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  publisher_name      = var.apim_publisher_name
-  publisher_email     = var.apim_publisher_email
-  sku_name            = var.apim_sku
+# API Management (Day-4 Future - commented out for state management issues)
+# resource "azurerm_api_management" "main" {
+#   name                = "apim-${var.name_prefix}-${terraform.workspace}"
+#   location            = azurerm_resource_group.main.location
+#   resource_group_name = azurerm_resource_group.main.name
+#   publisher_name      = var.apim_publisher_name
+#   publisher_email     = var.apim_publisher_email
+#   sku_name            = var.apim_sku
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
+#   tags = merge(var.tags, {
+#     Environment = terraform.workspace
+#   })
+# }
 
-# TODO: Day 5 - Key Vault
+# Key Vault (Day-1 Legacy Resource)
 resource "azurerm_key_vault" "main" {
-  name                        = "kv-${var.name_prefix}-${var.environment}"
+  name                        = "kv-${var.name_prefix}-${terraform.workspace}"
   location                    = azurerm_resource_group.main.location
   resource_group_name         = azurerm_resource_group.main.name
   enabled_for_disk_encryption = true
@@ -199,7 +212,7 @@ resource "azurerm_key_vault" "main" {
   sku_name                    = "standard"
 
   tags = merge(var.tags, {
-    Environment = var.environment
+    Environment = terraform.workspace
   })
 }
 
@@ -222,15 +235,24 @@ resource "azurerm_key_vault_access_policy" "current" {
   ]
 }
 
-# Store PostgreSQL password in Key Vault
-resource "azurerm_key_vault_secret" "postgres_password" {
-  name         = "postgres-admin-password"
-  value        = random_password.postgres_password.result
-  key_vault_id = azurerm_key_vault.main.id
+# PostgreSQL Password Storage (Optional - only if using generated password)
+# Note: For Day-3, password is passed via TF_VAR, not generated
+# resource "random_password" "postgres_password" {
+#   length  = 16
+#   special = true
+#   upper   = true
+#   lower   = true
+#   numeric = true
+# }
 
-  depends_on = [azurerm_key_vault_access_policy.current]
+# resource "azurerm_key_vault_secret" "postgres_password" {
+#   name         = "postgres-admin-password"
+#   value        = random_password.postgres_password.result
+#   key_vault_id = azurerm_key_vault.main.id
 
-  tags = merge(var.tags, {
-    Environment = var.environment
-  })
-}
+#   depends_on = [azurerm_key_vault_access_policy.current]
+
+#   tags = merge(var.tags, {
+#     Environment = terraform.workspace
+#   })
+# }

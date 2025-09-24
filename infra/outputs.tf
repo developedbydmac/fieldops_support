@@ -1,5 +1,24 @@
 # =============================================================================
-# NETWORK OUTPUTS (Day-2 Module Integration)
+# INFRASTRUCTURE OUTPUTS
+# FieldOps Support AI - Day-3 Modular Architecture
+# =============================================================================
+
+# =============================================================================
+# RESOURCE GROUP OUTPUTS
+# =============================================================================
+
+output "resource_group_name" {
+  description = "Name of the resource group"
+  value       = azurerm_resource_group.main.name
+}
+
+output "resource_group_location" {
+  description = "Location of the resource group"
+  value       = azurerm_resource_group.main.location
+}
+
+# =============================================================================
+# NETWORK MODULE OUTPUTS (Day-2)
 # =============================================================================
 
 output "vnet_id" {
@@ -32,40 +51,83 @@ output "network_summary" {
   value       = module.network.network_summary
 }
 
-# API Management Outputs
-output "apim_gateway_url" {
-  description = "Gateway URL for API Management"
-  value       = azurerm_api_management.main.gateway_url
-}
+# =============================================================================
+# STORAGE MODULE OUTPUTS (Day-3)
+# =============================================================================
 
-output "apim_name" {
-  description = "Name of the API Management instance"
-  value       = azurerm_api_management.main.name
-}
-
-# PostgreSQL Outputs
-output "postgres_fqdn" {
-  description = "FQDN of the PostgreSQL Flexible Server"
-  value       = azurerm_postgresql_flexible_server.main.fqdn
-}
-
-output "postgres_database_name" {
-  description = "Name of the PostgreSQL database"
-  value       = azurerm_postgresql_flexible_server_database.main.name
-}
-
-# Storage Outputs
 output "storage_account_name" {
   description = "Name of the storage account"
-  value       = azurerm_storage_account.logs.name
+  value       = module.storage.storage_account_name
 }
 
-output "storage_account_endpoint" {
+output "storage_blob_endpoint" {
   description = "Primary blob endpoint of the storage account"
-  value       = azurerm_storage_account.logs.primary_blob_endpoint
+  value       = module.storage.storage_primary_blob_endpoint
 }
 
-# Key Vault Outputs
+output "logs_container_name" {
+  description = "Name of the logs container"
+  value       = module.storage.logs_container_name
+}
+
+output "storage_summary" {
+  description = "Summary of storage deployment"
+  value       = module.storage.storage_summary
+}
+
+# =============================================================================
+# POSTGRESQL MODULE OUTPUTS (Day-3)
+# =============================================================================
+
+output "pg_fqdn" {
+  description = "Private FQDN of PostgreSQL Flexible Server"
+  value       = module.postgres.pg_fqdn
+}
+
+output "pg_db_name" {
+  description = "Name of the PostgreSQL database"
+  value       = module.postgres.pg_db_name
+}
+
+output "postgres_connection_info" {
+  description = "PostgreSQL connection information"
+  value       = module.postgres.connection_info
+  sensitive   = false
+}
+
+output "postgres_summary" {
+  description = "Summary of PostgreSQL deployment"
+  value       = module.postgres.postgres_summary
+}
+
+# =============================================================================
+# PRIVATE NETWORKING MODULE OUTPUTS (Day-3)
+# =============================================================================
+
+output "private_dns_zone_postgres_id" {
+  description = "ID of the PostgreSQL private DNS zone"
+  value       = module.private_net.pdz_postgres_id
+}
+
+output "private_dns_zone_blob_id" {
+  description = "ID of the Blob Storage private DNS zone"
+  value       = module.private_net.pdz_blob_id
+}
+
+output "private_endpoint_blob_id" {
+  description = "ID of the Blob Storage private endpoint"
+  value       = module.private_net.pe_blob_id
+}
+
+output "private_networking_summary" {
+  description = "Summary of private networking deployment"
+  value       = module.private_net.private_networking_summary
+}
+
+# =============================================================================
+# LEGACY RESOURCE OUTPUTS (Day-1 Foundation)
+# =============================================================================
+
 output "key_vault_uri" {
   description = "URI of the Key Vault"
   value       = azurerm_key_vault.main.vault_uri
@@ -76,18 +138,6 @@ output "key_vault_name" {
   value       = azurerm_key_vault.main.name
 }
 
-# App Service Outputs
-output "app_service_name" {
-  description = "Name of the App Service"
-  value       = azurerm_linux_web_app.main.name
-}
-
-output "app_service_default_hostname" {
-  description = "Default hostname of the App Service"
-  value       = azurerm_linux_web_app.main.default_hostname
-}
-
-# Log Analytics Outputs
 output "log_analytics_workspace_id" {
   description = "ID of the Log Analytics workspace"
   value       = azurerm_log_analytics_workspace.main.id
@@ -98,8 +148,26 @@ output "log_analytics_workspace_name" {
   value       = azurerm_log_analytics_workspace.main.name
 }
 
-# Resource Group Output
-output "resource_group_name" {
-  description = "Name of the resource group"
-  value       = azurerm_resource_group.main.name
-}
+# =============================================================================
+# FUTURE OUTPUTS (Day-4 - Commented out)
+# =============================================================================
+
+# output "app_service_name" {
+#   description = "Name of the App Service"
+#   value       = azurerm_linux_web_app.main.name
+# }
+
+# output "app_service_default_hostname" {
+#   description = "Default hostname of the App Service"
+#   value       = azurerm_linux_web_app.main.default_hostname
+# }
+
+# output "apim_gateway_url" {
+#   description = "Gateway URL for API Management"
+#   value       = azurerm_api_management.main.gateway_url
+# }
+
+# output "apim_name" {
+#   description = "Name of the API Management instance"
+#   value       = azurerm_api_management.main.name
+# }

@@ -128,3 +128,95 @@ variable "app_service_sku" {
   type        = string
   default     = "B1"
 }
+
+# =============================================================================
+# DAY-3 MODULE VARIABLES
+# =============================================================================
+
+variable "resource_group_name_override" {
+  description = "Optional: use an existing RG name; otherwise RG is created."
+  type        = string
+  default     = null
+}
+
+# PostgreSQL Variables (Day-3)
+variable "postgres_administrator_login" {
+  description = "PostgreSQL administrator login"
+  type        = string
+  default     = "fieldopsadmin"
+}
+
+variable "postgres_administrator_password" {
+  description = "PostgreSQL administrator password (sensitive). Pass via TF_VAR or CLI, not tfvars in repo."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "postgres_database_name" {
+  description = "Name of the PostgreSQL database to create"
+  type        = string
+  default     = "fieldops"
+}
+
+variable "postgres_server_sku_name" {
+  description = "PostgreSQL Flexible Server SKU name"
+  type        = string
+  default     = "Standard_B1ms"
+}
+
+variable "postgres_storage_mb_v2" {
+  description = "PostgreSQL storage size in MB (Day-3)"
+  type        = number
+  default     = 32768
+}
+
+variable "postgres_version_v2" {
+  description = "PostgreSQL version (Day-3)"
+  type        = string
+  default     = "16"
+}
+
+# Storage Variables (Day-3)
+variable "storage_account_tier" {
+  description = "Storage account tier"
+  type        = string
+  default     = "Standard"
+}
+
+variable "storage_replication_type" {
+  description = "Storage account replication type"
+  type        = string
+  default     = "LRS"
+}
+
+variable "storage_container_name" {
+  description = "Name of the primary storage container"
+  type        = string
+  default     = "logs"
+}
+
+# Private Networking Variables (Day-3)
+variable "enable_postgres_private_dns" {
+  description = "Enable private DNS zone for PostgreSQL"
+  type        = bool
+  default     = true
+}
+
+variable "enable_storage_private_endpoints" {
+  description = "Enable private endpoints for storage services"
+  type        = bool
+  default     = true
+}
+
+variable "enable_blob_private_endpoint" {
+  description = "Enable private endpoint for blob storage"
+  type        = bool
+  default     = true
+}
+
+variable "enable_file_private_endpoint" {
+  description = "Enable private endpoint for file storage"
+  type        = bool
+  default     = false
+}
