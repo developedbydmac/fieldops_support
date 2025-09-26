@@ -130,6 +130,66 @@ module "postgres" {
 }
 
 # =============================================================================
+# DAY-4: OBSERVABILITY MODULE
+# =============================================================================
+
+module "observability" {
+  source = "./modules/observability"
+  
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags = merge(var.tags, {
+    Environment = terraform.workspace
+    Phase       = "Day-4"
+  })
+}
+
+# =============================================================================
+# DAY-4: APP SERVICE MODULE
+# =============================================================================
+
+module "appsvc" {
+  source = "./modules/appsvc"
+  
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  law_id              = module.observability.law_id
+  
+  # App Service Plan configuration
+  plan_sku_tier = var.app_service_plan_sku_tier
+  plan_sku_size = var.app_service_plan_sku_size
+  
+  tags = merge(var.tags, {
+    Environment = terraform.workspace
+    Phase       = "Day-4"
+  })
+}
+
+# =============================================================================
+# DAY-4: API MANAGEMENT MODULE
+# =============================================================================
+
+module "apim" {
+  source = "./modules/apim"
+  
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  law_id              = module.observability.law_id
+  
+  # Publisher configuration
+  publisher_name  = var.publisher_name
+  publisher_email = var.publisher_email
+  
+  tags = merge(var.tags, {
+    Environment = terraform.workspace
+    Phase       = "Day-4"
+  })
+}
+
+# =============================================================================
 # LEGACY RESOURCES (Day-1 Foundation)
 # =============================================================================
 

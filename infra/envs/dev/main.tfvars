@@ -20,11 +20,12 @@ subnet_pe_cidr   = "10.20.3.0/24"
 # POSTGRESQL CONFIGURATION (Day-3 Module)
 # =============================================================================
 
-postgres_administrator_login = "fieldopsadmin"
-postgres_database_name       = "fieldops"
-postgres_server_sku_name     = "B_Standard_B1ms"
-postgres_storage_mb_v2       = 32768
-postgres_version_v2          = "16"
+postgres_administrator_login    = "fieldopsadmin"
+postgres_administrator_password = "P@ssw0rd123!"  # Change this in production!
+postgres_database_name          = "fieldops"
+postgres_server_sku_name        = "B_Standard_B1ms"
+postgres_storage_mb_v2          = 32768
+postgres_version_v2             = "16"
 
 # =============================================================================
 # STORAGE CONFIGURATION (Day-3 Module)
@@ -53,9 +54,21 @@ postgres_storage_mb  = 32768
 apim_sku            = "Developer_1"
 app_service_sku     = "F1"
 
-# Development team contact
+# Development team contact (legacy - deprecated)
 apim_publisher_name  = "FieldOps Dev Team"
 apim_publisher_email = "dev-fieldops@company.com"
+
+# =============================================================================
+# DAY-4 OBSERVABILITY & APP SERVICE CONFIGURATION
+# =============================================================================
+
+# Publisher information for API Management (Day-4)
+publisher_name  = "FieldOps AI"
+publisher_email = "support@example.com"
+
+# App Service Plan configuration (Day-4) - Standard tier due to quota constraints
+app_service_plan_sku_tier = "Standard"
+app_service_plan_sku_size = "S1"
 
 # =============================================================================
 # RESOURCE TAGS
@@ -65,7 +78,7 @@ tags = {
   project     = "fieldops-support-ai"
   env         = "dev"
   owner       = "D-Mac"
-  phase       = "Day-3"
+  phase       = "Day-4"
   managed_by  = "terraform"
   cost_center = "engineering"
 }

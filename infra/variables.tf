@@ -220,3 +220,33 @@ variable "enable_file_private_endpoint" {
   type        = bool
   default     = false
 }
+
+# =============================================================================
+# DAY-4 OBSERVABILITY & APP SERVICE VARIABLES
+# =============================================================================
+
+# Publisher information for API Management (Day-4)
+variable "publisher_name" {
+  description = "Name of the API publisher organization"
+  type        = string
+  default     = "FieldOps AI"
+}
+
+variable "publisher_email" {
+  description = "Email address of the API publisher"
+  type        = string
+  default     = "support@example.com"
+}
+
+# App Service Plan configuration (Day-4)
+variable "app_service_plan_sku_tier" {
+  description = "App Service Plan SKU tier (Basic, Standard, Premium, PremiumV2, PremiumV3)"
+  type        = string
+  default     = "Standard"
+}
+
+variable "app_service_plan_sku_size" {
+  description = "App Service Plan SKU size (B1, S1, P1v3, etc.)"
+  type        = string
+  default     = "S1"
+}

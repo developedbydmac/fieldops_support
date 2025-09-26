@@ -138,36 +138,49 @@ output "key_vault_name" {
   value       = azurerm_key_vault.main.name
 }
 
+# =============================================================================
+# DAY-4 MODULE OUTPUTS
+# =============================================================================
+
+# Observability Module Outputs
 output "log_analytics_workspace_id" {
-  description = "ID of the Log Analytics workspace"
-  value       = azurerm_log_analytics_workspace.main.id
+  description = "ID of the Log Analytics workspace (Day-4 module)"
+  value       = module.observability.law_id
 }
 
 output "log_analytics_workspace_name" {
-  description = "Name of the Log Analytics workspace"
-  value       = azurerm_log_analytics_workspace.main.name
+  description = "Name of the Log Analytics workspace (Day-4 module)"
+  value       = module.observability.law_name
 }
 
-# =============================================================================
-# FUTURE OUTPUTS (Day-4 - Commented out)
-# =============================================================================
+# App Service Module Outputs
+output "web_app_name" {
+  description = "Name of the Web App"
+  value       = module.appsvc.web_app_name
+}
 
-# output "app_service_name" {
-#   description = "Name of the App Service"
-#   value       = azurerm_linux_web_app.main.name
-# }
+output "web_app_default_hostname" {
+  description = "Default hostname of the Web App"
+  value       = module.appsvc.web_app_default_hostname
+}
 
-# output "app_service_default_hostname" {
-#   description = "Default hostname of the App Service"
-#   value       = azurerm_linux_web_app.main.default_hostname
-# }
+output "app_service_plan_name" {
+  description = "Name of the App Service Plan"
+  value       = module.appsvc.app_service_plan_name
+}
 
-# output "apim_gateway_url" {
-#   description = "Gateway URL for API Management"
-#   value       = azurerm_api_management.main.gateway_url
-# }
+# API Management Module Outputs
+output "apim_name" {
+  description = "Name of the API Management service"
+  value       = module.apim.apim_name
+}
 
-# output "apim_name" {
-#   description = "Name of the API Management instance"
-#   value       = azurerm_api_management.main.name
-# }
+output "apim_gateway_url" {
+  description = "Gateway URL of the API Management service"
+  value       = module.apim.apim_gateway_url
+}
+
+output "apim_developer_portal_url" {
+  description = "Developer portal URL of the API Management service"
+  value       = module.apim.apim_developer_portal_url
+}
