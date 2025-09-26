@@ -32,3 +32,9 @@ output "web_app_identity_principal_id" {
   description = "Principal ID of the Web App's system-assigned managed identity"
   value       = azurerm_linux_web_app.app.identity[0].principal_id
 }
+
+# Alias for Key Vault integration
+output "web_app_principal_id" {
+  description = "System-assigned managed identity principal ID for RBAC assignments"
+  value       = azurerm_linux_web_app.app.identity[0].principal_id
+}

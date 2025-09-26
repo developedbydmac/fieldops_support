@@ -125,18 +125,38 @@ output "private_networking_summary" {
 }
 
 # =============================================================================
-# LEGACY RESOURCE OUTPUTS (Day-1 Foundation)
+# DAY-5 KEY VAULT MODULE OUTPUTS
 # =============================================================================
 
 output "key_vault_uri" {
-  description = "URI of the Key Vault"
-  value       = azurerm_key_vault.main.vault_uri
+  description = "URI of the Key Vault for application configuration"
+  value       = module.keyvault.key_vault_uri
 }
 
 output "key_vault_name" {
   description = "Name of the Key Vault"
-  value       = azurerm_key_vault.main.name
+  value       = module.keyvault.key_vault_name
 }
+
+output "pg_secret_name" {
+  description = "Name of the PostgreSQL connection string secret in Key Vault"
+  value       = module.keyvault.pg_secret_name
+}
+
+output "web_app_principal_id" {
+  description = "Principal ID of the Web App's system-assigned managed identity"
+  value       = module.appsvc.web_app_principal_id
+}
+
+# =============================================================================
+# LEGACY RESOURCE OUTPUTS (Day-1 Foundation)
+# =============================================================================
+
+# Legacy Key Vault (commented out - replaced by Day-5 module)
+# output "legacy_key_vault_uri" {
+#   description = "URI of the legacy Key Vault"
+#   value       = azurerm_key_vault.main.vault_uri
+# }
 
 # =============================================================================
 # DAY-4 MODULE OUTPUTS

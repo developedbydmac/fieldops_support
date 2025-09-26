@@ -250,3 +250,19 @@ variable "app_service_plan_sku_size" {
   type        = string
   default     = "S1"
 }
+
+# =============================================================================
+# DAY-5 KEY VAULT VARIABLES
+# =============================================================================
+
+variable "kv_pg_secret_name" {
+  description = "Name for PostgreSQL connection string secret in Key Vault"
+  type        = string
+  default     = "pg-conn"
+}
+
+variable "create_pg_secret" {
+  description = "Whether to create PostgreSQL connection string secret in Key Vault"
+  type        = bool
+  default     = true
+}

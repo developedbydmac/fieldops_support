@@ -190,6 +190,33 @@ module "apim" {
 }
 
 # =============================================================================
+# DAY-5: KEY VAULT MODULE
+# =============================================================================
+
+module "keyvault" {
+  source = "./modules/keyvault"
+  
+  name_prefix         = "${var.name_prefix}-${terraform.workspace}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags = merge(var.tags, {
+    Environment = terraform.workspace
+    Phase       = "Day-5"
+  })
+
+  # RBAC assignment for Web App system-assigned identity
+  reader_principal_id = module.appsvc.web_app_principal_id
+
+  # PostgreSQL connection string secret configuration
+  create_pg_secret    = var.create_pg_secret
+  pg_secret_name      = var.kv_pg_secret_name
+  pg_server_fqdn      = module.postgres.pg_fqdn
+  pg_database         = module.postgres.pg_db_name
+  pg_admin_user       = var.postgres_administrator_login
+  pg_admin_password   = var.postgres_administrator_password
+}
+
+# =============================================================================
 # LEGACY RESOURCES (Day-1 Foundation)
 # =============================================================================
 

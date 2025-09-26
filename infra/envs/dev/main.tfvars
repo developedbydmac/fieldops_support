@@ -20,9 +20,10 @@ subnet_pe_cidr   = "10.20.3.0/24"
 # POSTGRESQL CONFIGURATION (Day-3 Module)
 # =============================================================================
 
-postgres_administrator_login    = "fieldopsadmin"
-postgres_administrator_password = "P@ssw0rd123!"  # Change this in production!
-postgres_database_name          = "fieldops"
+postgres_administrator_login = "fieldopsadmin"
+# NOTE: postgres_administrator_password must be passed via TF_VAR or CLI -var parameter
+# DO NOT store passwords in tfvars files in source control
+postgres_database_name = "fieldops"
 postgres_server_sku_name        = "B_Standard_B1ms"
 postgres_storage_mb_v2          = 32768
 postgres_version_v2             = "16"
@@ -71,6 +72,14 @@ app_service_plan_sku_tier = "Standard"
 app_service_plan_sku_size = "S1"
 
 # =============================================================================
+# DAY-5 KEY VAULT CONFIGURATION
+# =============================================================================
+
+# Key Vault secret configuration (no secrets stored in tfvars)
+kv_pg_secret_name = "pg-conn"
+create_pg_secret  = true
+
+# =============================================================================
 # RESOURCE TAGS
 # =============================================================================
 
@@ -78,7 +87,7 @@ tags = {
   project     = "fieldops-support-ai"
   env         = "dev"
   owner       = "D-Mac"
-  phase       = "Day-4"
+  phase       = "Day-5"
   managed_by  = "terraform"
   cost_center = "engineering"
 }
