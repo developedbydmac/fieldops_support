@@ -1,0 +1,34 @@
+{
+  "policies": [
+    {
+      "name": "fieldops_rbac_policy",
+      "description": "RBAC policy for FieldOps Support AI access control",
+      "rules": [
+        {
+          "effect": "allow",
+          "principals": ["field-technicians"],
+          "actions": ["read"],
+          "resources": ["api/diagnostics/*", "api/reports/*"]
+        },
+        {
+          "effect": "allow", 
+          "principals": ["field-managers"],
+          "actions": ["read", "write"],
+          "resources": ["api/reports/*", "api/equipment/*"]
+        },
+        {
+          "effect": "allow",
+          "principals": ["system-admin"],
+          "actions": ["*"],
+          "resources": ["*"]
+        },
+        {
+          "effect": "deny",
+          "principals": ["*"],
+          "actions": ["delete"],
+          "resources": ["api/audit/*"]
+        }
+      ]
+    }
+  ]
+}

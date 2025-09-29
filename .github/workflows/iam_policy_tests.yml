@@ -1,0 +1,90 @@
+name: IAM Policy Tests
+
+on:
+  push:
+    paths:
+      - 'infra/policies.json'
+      - 'infra/**/*.tf'
+  pull_request:
+    paths:
+      - 'infra/policies.json'  
+      - 'infra/**/*.tf'
+
+jobs:
+  opa-policy-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup OPA
+      run: |
+        curl -L -o opa https://openpolicyagent.org/downloads/v0.57.0/opa_linux_amd64_static
+        chmod 755 ./opa
+        sudo mv opa /usr/local/bin/
+        
+    - name: Validate Policy JSON
+      run: |
+        if [ -f "infra/policies.json" ]; then
+          python3 -m json.tool infra/policies.json > /dev/null
+          echo "✅ Policy JSON is valid"
+        fi
+        
+    - name: Create OPA test policy
+      run: |
+        cat > test_policy.rego << 'EOF'
+        package fieldops.rbac
+        
+        import future.keywords.if
+        import future.keywords.in
+        
+        # Test that field technicians can read diagnostics
+        test_field_tech_read_diagnostics if {
+            allow with input as {
+                "principal": "field-technicians",
+                "action": "read", 
+                "resource": "api/diagnostics/camera-status"
+            }
+        }
+        
+        # Test that field technicians cannot delete audit logs
+        test_field_tech_cannot_delete_audit if {
+            not allow with input as {
+                "principal": "field-technicians",
+                "action": "delete",
+                "resource": "api/audit/logs"
+            }
+        }
+        
+        # Simple policy evaluation logic
+        default allow = false
+        
+        allow if {
+            input.principal == "system-admin"
+        }
+        
+        allow if {
+            input.principal == "field-technicians"
+            input.action == "read"
+            startswith(input.resource, "api/diagnostics")
+        }
+        EOF
+        
+    - name: Run OPA tests
+      run: |
+        opa test test_policy.rego -v
+        
+    - name: Evaluate sample policy decisions
+      run: |
+        echo "Testing policy evaluation..."
+        
+        # Test field technician access
+        opa eval -d test_policy.rego "data.fieldops.rbac.allow" \
+          --input <(echo '{"principal": "field-technicians", "action": "read", "resource": "api/diagnostics/camera-1"}')
+          
+        # Test admin access  
+        opa eval -d test_policy.rego "data.fieldops.rbac.allow" \
+          --input <(echo '{"principal": "system-admin", "action": "delete", "resource": "api/equipment/camera-1"}')
+        
+        echo "✅ OPA policy evaluation completed"

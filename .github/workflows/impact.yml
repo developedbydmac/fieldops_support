@@ -1,0 +1,98 @@
+name: Generate Automation Impact Metrics
+
+on:
+  push:
+    paths:
+      - 'docs/automation_catalog.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-impact:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml
+        
+    - name: Generate automation impact report
+      run: |
+        python3 << 'EOF'
+        import yaml
+        import os
+        
+        # Read automation catalog
+        with open('docs/automation_catalog.yml', 'r') as f:
+            catalog = yaml.safe_load(f)
+        
+        # Generate markdown table
+        markdown_content = """# Automation Impact Analysis
+        
+        This document is automatically generated from the automation catalog and shows the quantified impact of our automation initiatives.
+        
+        ## Summary Metrics
+        
+        | Manual Task | Automated Solution | Time Saved (min) | Percent Faster | Compliance % |
+        |-------------|-------------------|------------------|----------------|--------------|"""
+        
+        total_time_saved = 0
+        for entry in catalog['automation_entries']:
+            time_saved = entry['baseline_minutes'] - entry['automated_minutes']
+            percent_faster = round(((entry['baseline_minutes'] - entry['automated_minutes']) / entry['baseline_minutes']) * 100, 1)
+            total_time_saved += time_saved
+            
+            markdown_content += f"""
+        | {entry['manual_task']} | {entry['automated_solution']} | {time_saved} | {percent_faster}% | {entry['compliance_percent']}% |"""
+        
+        markdown_content += f"""
+        
+        ## Key Insights
+        
+        - **Total Time Saved per Cycle**: {total_time_saved} minutes ({round(total_time_saved/60, 1)} hours)
+        - **Automation Coverage**: {len(catalog['automation_entries'])} critical processes automated
+        - **Average Compliance**: {round(sum(e['compliance_percent'] for e in catalog['automation_entries']) / len(catalog['automation_entries']), 1)}%
+        
+        ## Evidence and Validation
+        
+        Each automation has associated evidence and validation artifacts:
+        """
+        
+        for entry in catalog['automation_entries']:
+            markdown_content += f"""
+        ### {entry['name'].replace('_', ' ').title()}
+        - **Tools**: {', '.join(entry['tools'])}
+        - **Evidence Paths**: {', '.join(entry['evidence_paths'])}
+        - **Impact**: {entry['headline']}
+        """
+        
+        markdown_content += f"""
+        
+        ---
+        *Generated automatically on workflow run. Last updated: {os.environ.get('GITHUB_RUN_ID', 'local')}*
+        """
+        
+        # Write the generated file
+        with open('docs/automation_impact.md', 'w') as f:
+            f.write(markdown_content)
+        
+        print("Generated automation_impact.md successfully")
+        EOF
+        
+    - name: Commit generated report
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/automation_impact.md
+        git diff --staged --quiet || git commit -m "🤖 Auto-update automation impact metrics"
+        git push

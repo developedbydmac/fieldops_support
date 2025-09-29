@@ -1,0 +1,47 @@
+name: Ansible Validation
+
+on:
+  push:
+    paths:
+      - 'config/**'
+      - 'ops/**'
+  pull_request:
+    paths:
+      - 'config/**'
+      - 'ops/**'
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Ansible and ansible-lint
+      run: |
+        pip install ansible ansible-lint
+        
+    - name: Run ansible-lint on config directory
+      run: |
+        if [ -d "config" ]; then
+          ansible-lint config/
+        fi
+        
+    - name: Run ansible-lint on ops directory  
+      run: |
+        if [ -d "ops" ]; then
+          ansible-lint ops/
+        fi
+        
+    - name: Validate Ansible syntax
+      run: |
+        find config ops -name "*.yml" -o -name "*.yaml" 2>/dev/null | while read file; do
+          echo "Checking syntax: $file"
+          ansible-playbook --syntax-check "$file" || exit 1
+        done

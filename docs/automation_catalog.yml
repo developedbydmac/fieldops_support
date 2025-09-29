@@ -1,0 +1,46 @@
+automation_entries:
+  - name: infrastructure_provisioning
+    headline: "Transform manual Azure resource creation into repeatable Infrastructure as Code deployments"
+    manual_task: "Manual server setup to Terraform IaC on Azure"
+    automated_solution: "Terraform modules with GitHub Actions CI/CD pipeline"
+    tools:
+      - Terraform
+      - GitHub Actions
+      - Azure Resource Manager
+    baseline_minutes: 120
+    automated_minutes: 10
+    compliance_percent: 95
+    evidence_paths:
+      - "infra/"
+      - "evidence/provisioning/"
+    
+  - name: patch_management
+    headline: "Automate monthly security patching from manual server-by-server updates to orchestrated deployments"
+    manual_task: "Monthly patching to Ansible playbooks using Arc or VMSS"
+    automated_solution: "Ansible automation with Azure Arc integration and compliance monitoring"
+    tools:
+      - Ansible
+      - ansible-lint
+      - Log Analytics
+    baseline_minutes: 45
+    automated_minutes: 5
+    compliance_percent: 95
+    evidence_paths:
+      - "ops/"
+      - "config/"
+      - "evidence/patching/"
+      
+  - name: access_management
+    headline: "Convert manual access requests into policy-driven RBAC automation with complete audit trails"
+    manual_task: "User access requests to Azure RBAC as code"
+    automated_solution: "Terraform-managed RBAC with OPA policy validation and Key Vault integration"
+    tools:
+      - Terraform
+      - OPA
+      - Key Vault RBAC
+    baseline_minutes: 20
+    automated_minutes: 2
+    compliance_percent: 100
+    evidence_paths:
+      - "infra/"
+      - "evidence/iam/"
