@@ -1,0 +1,109 @@
+# Alertmanager configuration for FieldOps Support AI
+global:
+  # Global configuration
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'fieldops-alerts@company.com'
+  slack_api_url_file: '/dev/null'  # Will be overridden by webhook URL
+
+# Route tree for alert routing
+route:
+  group_by: ['alertname', 'slo']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'fieldops-slack'
+  
+  # Route by severity
+  routes:
+    # Page-level alerts (immediate notification)
+    - matchers:
+        - severity="page"
+      receiver: 'fieldops-slack-page'
+      group_wait: 5s
+      repeat_interval: 30m
+      
+    # Notify-level alerts (standard notification)
+    - matchers:
+        - severity="notify"
+      receiver: 'fieldops-slack-notify'
+      group_wait: 30s
+      repeat_interval: 2h
+
+# Inhibition rules - prevent noise during outages
+inhibit_rules:
+  # Inhibit SLO burn alerts when service is down
+  - source_matchers:
+      - alertname="FieldOpsServiceDown"
+    target_matchers:
+      - alertname=~".*SLOBurnRate.*"
+    equal: ['instance']
+
+  # Inhibit slow burn when fast burn is active
+  - source_matchers:
+      - burn_rate="fast"
+    target_matchers:
+      - burn_rate="slow"
+    equal: ['slo']
+
+# Receivers - notification destinations
+receivers:
+  # Default Slack receiver
+  - name: 'fieldops-slack'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#fieldops-alerts'
+        title: 'FieldOps Alert - {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          {{ if .Labels.slo }}*SLO:* {{ .Labels.slo }}{{ end }}
+          {{ if .Annotations.dashboard_url }}*Dashboard:* {{ .Annotations.dashboard_url }}{{ end }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+        icon_emoji: ':warning:'
+        
+  # Page-level alerts (urgent)
+  - name: 'fieldops-slack-page'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#fieldops-alerts'
+        title: '🚨 URGENT: FieldOps {{ .GroupLabels.alertname }}'
+        text: |
+          <!channel> **URGENT ALERT**
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          {{ if .Labels.slo }}*SLO:* {{ .Labels.slo }}{{ end }}
+          {{ if .Annotations.dashboard_url }}*Dashboard:* {{ .Annotations.dashboard_url }}{{ end }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+        icon_emoji: ':rotating_light:'
+        color: 'danger'
+        
+  # Notify-level alerts (standard)
+  - name: 'fieldops-slack-notify'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#fieldops-alerts'
+        title: 'FieldOps Notification - {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          {{ if .Labels.slo }}*SLO:* {{ .Labels.slo }}{{ end }}
+          {{ if .Annotations.dashboard_url }}*Dashboard:* {{ .Annotations.dashboard_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+        icon_emoji: ':information_source:'
+        color: 'warning'
+
+# Templates for custom notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

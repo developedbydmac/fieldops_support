@@ -1,0 +1,246 @@
+# FieldOps Support AI - Alerting Rules
+# SLI/SLO based alerting with multi-window, multi-burn-rate alerts
+
+groups:
+  # Recording Rules - Calculate SLIs
+  - name: fieldops.sli
+    interval: 30s
+    rules:
+      # Availability SLI: fraction of successful health checks per minute
+      - record: fieldops:sli_availability
+        expr: |
+          (
+            rate(probe_success{job="blackbox-http"}[1m])
+          )
+        labels:
+          slo: "availability"
+
+      # Latency SLI: P95 API latency from synthetic checks
+      - record: fieldops:sli_latency_p95
+        expr: |
+          histogram_quantile(0.95,
+            rate(probe_duration_seconds_bucket{job="blackbox-http"}[1m])
+          )
+        labels:
+          slo: "latency"
+
+      # Error Rate SLI: 5xx responses per total requests
+      - record: fieldops:sli_error_rate
+        expr: |
+          (
+            rate(fieldops_http_requests_total{code=~"5.."}[1m])
+          ) / (
+            rate(fieldops_http_requests_total[1m])
+          )
+        labels:
+          slo: "error_rate"
+
+      # Sync Success SLI: successful device syncs vs attempts
+      - record: fieldops:sli_sync_success
+        expr: |
+          (
+            rate(fieldops_sync_success_total[1m])
+          ) / (
+            rate(fieldops_sync_attempts_total[1m])
+          )
+        labels:
+          slo: "sync_success"
+
+  # SLO Burn Rate Rules
+  - name: fieldops.slo_burn
+    interval: 30s
+    rules:
+      # Availability burn rate (target: 99.5% = 0.5% error budget)
+      - record: fieldops:slo_burn_rate_availability
+        expr: |
+          (1 - fieldops:sli_availability) / (1 - 0.995)
+
+      # Latency burn rate (target: P95 < 300ms)
+      - record: fieldops:slo_burn_rate_latency
+        expr: |
+          clamp_min(
+            (fieldops:sli_latency_p95 - 0.3) / 0.3,
+            0
+          )
+
+      # Error rate burn rate (target: < 1%)
+      - record: fieldops:slo_burn_rate_error_rate
+        expr: |
+          fieldops:sli_error_rate / 0.01
+
+      # Sync success burn rate (target: 98% success = 2% error budget)
+      - record: fieldops:slo_burn_rate_sync_success
+        expr: |
+          (1 - fieldops:sli_sync_success) / 0.02
+
+  # Multi-Window Multi-Burn-Rate Alerts
+  - name: fieldops.slo_alerts
+    rules:
+      # Availability SLO Alerts
+      - alert: FieldOpsAvailabilitySLOBurnRateFast
+        expr: |
+          (
+            fieldops:slo_burn_rate_availability > (14.4 * 0.001)
+            and
+            fieldops:slo_burn_rate_availability > (14.4 * 0.001)
+          )
+        for: 2m
+        labels:
+          severity: page
+          slo: availability
+          burn_rate: fast
+        annotations:
+          summary: "FieldOps availability SLO burn rate is too fast"
+          description: "High error budget burn for availability SLO. Current burn rate: {{ $value | humanizePercentage }}"
+          dashboard_url: "http://localhost:3000/d/fieldops-overview"
+          runbook_url: "https://github.com/developedbydmac/fieldops_support/docs/runbooks/availability.md"
+
+      - alert: FieldOpsAvailabilitySLOBurnRateSlow
+        expr: |
+          (
+            fieldops:slo_burn_rate_availability > (6 * 0.001)
+            and
+            fieldops:slo_burn_rate_availability > (6 * 0.001)
+          )
+        for: 15m
+        labels:
+          severity: notify
+          slo: availability
+          burn_rate: slow
+        annotations:
+          summary: "FieldOps availability SLO burn rate is elevated"
+          description: "Sustained error budget burn for availability SLO. Current burn rate: {{ $value | humanizePercentage }}"
+
+      # Latency SLO Alerts
+      - alert: FieldOpsLatencySLOBurnRateFast
+        expr: |
+          (
+            fieldops:slo_burn_rate_latency > 14.4
+            and
+            fieldops:slo_burn_rate_latency > 14.4
+          )
+        for: 2m
+        labels:
+          severity: page
+          slo: latency
+          burn_rate: fast
+        annotations:
+          summary: "FieldOps latency SLO burn rate is too fast"
+          description: "High error budget burn for latency SLO. Current P95 latency: {{ $value }}s"
+
+      # Error Rate SLO Alerts
+      - alert: FieldOpsErrorRateSLOBurnRateFast
+        expr: |
+          (
+            fieldops:slo_burn_rate_error_rate > 14.4
+            and
+            fieldops:slo_burn_rate_error_rate > 14.4
+          )
+        for: 2m
+        labels:
+          severity: page
+          slo: error_rate
+          burn_rate: fast
+        annotations:
+          summary: "FieldOps error rate SLO burn rate is too fast"
+          description: "High error budget burn for error rate SLO. Current error rate: {{ $value | humanizePercentage }}"
+
+      # Sync Success SLO Alerts
+      - alert: FieldOpsSyncSuccessSLOBurnRateFast
+        expr: |
+          (
+            fieldops:slo_burn_rate_sync_success > 14.4
+            and
+            fieldops:slo_burn_rate_sync_success > 14.4
+          )
+        for: 2m
+        labels:
+          severity: page
+          slo: sync_success
+          burn_rate: fast
+        annotations:
+          summary: "FieldOps sync success SLO burn rate is too fast"
+          description: "High error budget burn for sync success SLO. Current success rate: {{ $value | humanizePercentage }}"
+
+  # Classic Infrastructure Alerts
+  - name: fieldops.classic_alerts
+    rules:
+      # Service Down
+      - alert: FieldOpsServiceDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: page
+          alert_type: classic
+        annotations:
+          summary: "FieldOps service is down"
+          description: "FieldOps API endpoint {{ $labels.instance }} has been down for more than 1 minute"
+
+      # High Latency
+      - alert: FieldOpsHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(probe_duration_seconds_bucket{job="blackbox-http"}[5m])
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: notify
+          alert_type: classic
+        annotations:
+          summary: "FieldOps API high latency"
+          description: "FieldOps API P95 latency is {{ $value }}s, exceeding 1 second threshold"
+
+      # High Error Rate
+      - alert: FieldOpsHighErrorRate
+        expr: |
+          (
+            rate(fieldops_http_requests_total{code=~"5.."}[5m])
+          ) / (
+            rate(fieldops_http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: notify
+          alert_type: classic
+        annotations:
+          summary: "FieldOps API high error rate"
+          description: "FieldOps API error rate is {{ $value | humanizePercentage }}, exceeding 5% threshold"
+
+      # Sync Failing
+      - alert: FieldOpsSyncFailing
+        expr: |
+          (
+            rate(fieldops_sync_success_total[5m])
+          ) / (
+            rate(fieldops_sync_attempts_total[5m])
+          ) < 0.9
+        for: 2m
+        labels:
+          severity: page
+          alert_type: classic
+        annotations:
+          summary: "FieldOps device sync failing"
+          description: "FieldOps sync success rate is {{ $value | humanizePercentage }}, below 90% threshold"
+
+      # Host Resources
+      - alert: FieldOpsHighCPUUsage
+        expr: |
+          100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: notify
+          alert_type: classic
+        annotations:
+          summary: "FieldOps host high CPU usage"
+          description: "Host CPU usage is {{ $value | humanizePercentage }}, exceeding 80% threshold"
+
+      - alert: FieldOpsHighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: notify
+          alert_type: classic
+        annotations:
+          summary: "FieldOps host high memory usage"
+          description: "Host memory usage is {{ $value | humanizePercentage }}, exceeding 85% threshold"
